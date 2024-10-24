@@ -127,7 +127,7 @@ from bs4 import BeautifulSoup
 from sqlalchemy.orm import Session
 
 
-def add_new(news_data):
+def store_news(news_data):
     """
     add new to db
     :param news_data: news info
@@ -146,85 +146,87 @@ def add_new(news_data):
     session.close()
 
 
-def get_new_info(search_term, is_initial=False):
+def get_new_info(search_term, fetch_all_pages=False):
     """
     get new
 
     :param search_term:
-    :param is_initial:
+    :param fetch_all_pages:
     :return:
     """
-    all_news_data = []
+    news_data = []
     # iterate pages to get more news data, not actually get all news data
-    if is_initial:
-        a = []
-        for p in range(1, 10):
-            p2 = {
-                "page": p,
+    if fetch_all_pages:
+        data_pages = []
+        for page_number in range(1, 10):
+            paged_params = {
+                "page": page_number,
                 "id": f"search:{quote(search_term)}",
                 "channelId": 2,
                 "type": "searchword",
             }
-            response = requests.get("https://udn.com/api/more", params=p2)
-            a.append(response.json()["lists"])
+            response = requests.get("https://udn.com/api/more", params=paged_params)
+            data_pages.append(response.json()["lists"])
 
-        for l in a:
-            all_news_data.append(l)
+        for page in data_pages:
+            news_data.extend(page)
     else:
-        p = {
+        params = {
             "page": 1,
             "id": f"search:{quote(search_term)}",
             "channelId": 2,
             "type": "searchword",
         }
-        response = requests.get("https://udn.com/api/more", params=p)
+        response = requests.get("https://udn.com/api/more", params=params)
 
-        all_news_data = response.json()["lists"]
-    return all_news_data
+        news_data = response.json()["lists"]
+    return news_data
 
-def get_new(is_initial=False):
+def get_new(fetch_all_pages=False):
     """
     get new info
 
-    :param is_initial:
+    :param fetch_all_pages:
     :return:
     """
-    news_data = get_new_info("價格", is_initial=is_initial)
+    news_data = get_new_info("價格", fetch_all_pages=fetch_all_pages)
     for news in news_data:
-        title = news["title"]
-        m = [
+        news_title = news["title"]
+        messages = [
             {
                 "role": "system",
                 "content": "你是一個關聯度評估機器人，請評估新聞標題是否與「民生用品的價格變化」相關，並給予'high'、'medium'、'low'評價。(僅需回答'high'、'medium'、'low'三個詞之一)",
             },
-            {"role": "user", "content": f"{title}"},
+            {"role": "user", "content": f"{news_title}"},
         ]
-        ai = OpenAI(api_key="xxx").chat.completions.create(
+        ai_response = OpenAI(api_key="xxx").chat.completions.create(
             model="gpt-3.5-turbo",
-            messages=m,
+            messages=messages,
         )
-        relevance = ai.choices[0].message.content
+
+        relevance = ai_response.choices[0].message.content
+
         if relevance == "high":
             response = requests.get(news["titleLink"])
             soup = BeautifulSoup(response.text, "html.parser")
             # 標題
-            title = soup.find("h1", class_="article-content__title").text
-            time = soup.find("time", class_="article-content__time").text
+            news_title = soup.find("h1", class_="article-content__title").text
+            news_time = soup.find("time", class_="article-content__time").text
             # 定位到包含文章内容的 <section>
             content_section = soup.find("section", class_="article-content__editor")
 
             paragraphs = [
-                p.text
-                for p in content_section.find_all("p")
-                if p.text.strip() != "" and "▪" not in p.text
+                paragraphs.text
+                for paragraph in content_section.find_all("p")
+                if paragraph.text.strip() != "" and "▪" not in paragraph.text
             ]
             detailed_news =  {
                 "url": news["titleLink"],
-                "title": title,
-                "time": time,
+                "title": news_title,
+                "time": news_time,
                 "content": paragraphs,
             }
-            m = [
+            summary_messages = [
                 {
                     "role": "system",
                     "content": "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
@@ -234,13 +236,13 @@ def get_new(is_initial=False):
 
             completion = OpenAI(api_key="xxx").chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=m,
+                messages=summary_messages,
             )
             result = completion.choices[0].message.content
             result = json.loads(result)
             detailed_news["summary"] = result["影響"]
             detailed_news["reason"] = result["原因"]
-            add_new(detailed_news)
+            store_news(detailed_news)
 
 
 @app.on_event("startup")
@@ -276,11 +278,11 @@ def verify(p1, p2):
     return pwd_context.verify(p1, p2)
 
 
-def check_user_password_is_correct(db, n, pwd):
-    OuO = db.query(User).filter(User.username == n).first()
-    if not verify(pwd, OuO.hashed_password):
+def check_user_password_is_correct(db, name, password):
+    user = db.query(User).filter(User.username == name).first()
+    if not verify(password, user.hashed_password):
         return False
-    return OuO
+    return user
 
 
 def authenticate_user_token(
@@ -338,20 +340,20 @@ _id_counter = itertools.count(start=1000000)
 
 
 def get_article_upvote_details(article_id, uid, db):
-    cnt = (
+    upvote_count = (
         db.query(user_news_association_table)
         .filter_by(news_articles_id=article_id)
         .count()
     )
-    voted = False
+    user_voted = False
     if uid:
-        voted = (
+        user_voted = (
                 db.query(user_news_association_table)
                 .filter_by(news_articles_id=article_id, user_id=uid)
                 .first()
                 is not None
         )
-    return cnt, voted
+    return upvote_count, user_voted
 
 
 @app.get("/api/v1/news/news")
@@ -406,7 +408,7 @@ class PromptRequest(BaseModel):
 async def search_news(request: PromptRequest):
     prompt = request.prompt
     news_list = []
-    m = [
+    keyword_extraction_prompt = [
         {
             "role": "system",
             "content": "你是一個關鍵字提取機器人，用戶將會輸入一段文字，表示其希望看見的新聞內容，請提取出用戶希望看見的關鍵字，請截取最重要的關鍵字即可，避免出現「新聞」、「資訊」等混淆搜尋引擎的字詞。(僅須回答關鍵字，若有多個關鍵字，請以空格分隔)",
@@ -416,12 +418,12 @@ async def search_news(request: PromptRequest):
 
     completion = OpenAI(api_key="xxx").chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=m,
+        messages=keyword_extraction_prompt,
     )
     keywords = completion.choices[0].message.content
     # should change into simple factory pattern
-    news_items = get_new_info(keywords, is_initial=False)
-    for news in news_items:
+    news_articles = get_new_info(keywords, fetch_all_pages=False)
+    for news in news_articles:
         try:
             response = requests.get(news["titleLink"])
             soup = BeautifulSoup(response.text, "html.parser")
@@ -436,15 +438,15 @@ async def search_news(request: PromptRequest):
                 for p in content_section.find_all("p")
                 if p.text.strip() != "" and "▪" not in p.text
             ]
-            detailed_news = {
+            parsed_news = {
                 "url": news["titleLink"],
                 "title": title,
                 "time": time,
                 "content": paragraphs,
             }
-            detailed_news["content"] = " ".join(detailed_news["content"])
-            detailed_news["id"] = next(_id_counter)
-            news_list.append(detailed_news)
+            parsed_news["content"] = " ".join(parsed_news["content"])
+            parsed_news["id"] = next(_id_counter)
+            news_list.append(parsed_news)
         except Exception as e:
             print(e)
     return sorted(news_list, key=lambda x: x["time"], reverse=True)
@@ -454,10 +456,10 @@ class NewsSumaryRequestSchema(BaseModel):
 
 @app.post("/api/v1/news/news_summary")
 async def news_summary(
-        payload: NewsSumaryRequestSchema, u=Depends(authenticate_user_token)
+        payload: NewsSumaryRequestSchema, user=Depends(authenticate_user_token)
 ):
     response = {}
-    m = [
+    request_message = [
         {
             "role": "system",
             "content": "你是一個新聞摘要生成機器人，請統整新聞中提及的影響及主要原因 (影響、原因各50個字，請以json格式回答 {'影響': '...', '原因': '...'})",
@@ -467,7 +469,7 @@ async def news_summary(
 
     completion = OpenAI(api_key="xxx").chat.completions.create(
         model="gpt-3.5-turbo",
-        messages=m,
+        messages=request_message,
     )
     result = completion.choices[0].message.content
     if result:
