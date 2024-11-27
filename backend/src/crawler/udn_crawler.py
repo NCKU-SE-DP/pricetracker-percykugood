@@ -126,8 +126,7 @@ class UDNCrawler(NewsCrawlerBase):
         paragraphs = [
             p.text
             for p in content.find_all("p") 
-            if p.text.strip() != "" and "?" not in p.text 
-            and "▪" not in p.text
+            if p.text.strip() != "" and "▪" not in p.text
         ]
         
         content = " ".join(paragraphs)
