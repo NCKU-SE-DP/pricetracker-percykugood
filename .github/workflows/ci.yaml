@@ -25,6 +25,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set PowerShell execution policy
+        run: |
+          Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force
+        shell: pwsh
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
