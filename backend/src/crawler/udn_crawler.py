@@ -83,12 +83,10 @@ class UDNCrawler(NewsCrawlerBase):
     def _create_search_params(self, page: int, search_term: str) -> dict:
 
         params = {
-            "id": "2",
             "page": page,
-            "cate_id": "2",
-            "type": "breaknews",
-            "totalRecNo": 0,
-            "q": search_term,
+            "id": f"search:{search_term}",
+            "channelId": self.CHANNEL_ID,
+            "type": "searchword",
         }
 
         return params            
