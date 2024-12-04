@@ -5,8 +5,10 @@ from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
+from src.llm_client.openai_client import OpenAIClient
 
 crawler = UDNCrawler()
+llm_client = OpenAIClient(api_key="your_openai_api_key")
 
 def store_news(news_data):
     """
@@ -31,11 +33,8 @@ def get_new_info(search_term, fetch_all_pages=False):
     """
     
 
-    if fetch_all_pages:
-        all_news_data = crawler.startup(search_term=search_term)
-    else:
-        all_news_data = crawler.get_headline(search_term,page=1)
-    return all_news_data
+    headlines = crawler.get_headline(search_term, page=(1, 10) if fetch_all_pages else 1)
+    return [headline.dict() for headline in headlines]
 
 
 def toggle_upvote(n_id, u_id, db):
@@ -164,17 +163,17 @@ def news_exists(id2, db: Session):
     """
     return db.query(NewsArticle).filter_by(id=id2).first() is not None
 
-def generate_ai_response(content, prompt):
-    message = [
-        {
-            "role": "system",
-            "content": prompt,
-        },
-        {"role": "user", "content": f"{content}"},
-    ]
+def generate_ai_response(prompt: str, model: str = "gpt-3.5-turbo", **kwargs) -> str:
+    """
+    Generate a response from the AI model based on the given prompt.
 
-    completion = OpenAI(api_key="xxx").chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=message,
-    )
-    return completion.choices[0].message.content
+    :param prompt: The prompt to generate a response from.
+    :type prompt: str
+    :param model: The model to use for generating the response (default is "gpt-3.5-turbo").
+    :type model: str
+    :param kwargs: Additional keyword arguments for the generation.
+    :return: The generated response.
+    :rtype: str
+    """
+    response = llm_client.generate_text(prompt, model=model, **kwargs)
+    return response["choices"][0]["message"]["content"]
