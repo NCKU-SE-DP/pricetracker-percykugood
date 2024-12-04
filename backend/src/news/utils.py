@@ -6,9 +6,10 @@ from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
 from src.llm_client.openai_client import OpenAIClient
+from src.llm_client.base import MessageInterface
 
 crawler = UDNCrawler()
-llm_client = OpenAIClient(api_key="your_openai_api_key")
+llm_client = OpenAIClient(api_key="xxx")
 
 def store_news(news_data):
     """
@@ -163,17 +164,17 @@ def news_exists(id2, db: Session):
     """
     return db.query(NewsArticle).filter_by(id=id2).first() is not None
 
-def generate_ai_response(prompt: str, model: str = "gpt-3.5-turbo", **kwargs) -> str:
-    """
-    Generate a response from the AI model based on the given prompt.
+def generate_ai_response(content, prompt):
+    message = [
+        {
+            "role": "system",
+            "content": prompt,
+        },
+        {"role": "user", "content": f"{content}"},
+    ]
 
-    :param prompt: The prompt to generate a response from.
-    :type prompt: str
-    :param model: The model to use for generating the response (default is "gpt-3.5-turbo").
-    :type model: str
-    :param kwargs: Additional keyword arguments for the generation.
-    :return: The generated response.
-    :rtype: str
-    """
-    response = llm_client.generate_text(prompt, model=model, **kwargs)
-    return response["choices"][0]["message"]["content"]
+    completion = OpenAI(api_key="xxx").chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=message,
+    )
+    return completion.choices[0].message.content
