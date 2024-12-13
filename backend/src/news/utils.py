@@ -5,6 +5,7 @@ from src.models import user_news_association_table, NewsArticle
 from openai import OpenAI
 from src.auth.database import SessionLocal
 from src.crawler.udn_crawler import UDNCrawler
+
 from src.llm_client.client import AnthropicClient, OpenAIClient
 from dotenv import load_dotenv
 import os
@@ -14,6 +15,7 @@ load_dotenv()
 crawler = UDNCrawler()
 openai_client = OpenAIClient(api_key=os.getenv("openai"))
 anthropic_client = AnthropicClient(api_key=os.getenv("claude"))
+
 
 def store_news(news_data):
     """
@@ -40,6 +42,7 @@ def get_new_info(search_term, fetch_all_pages=False):
 
     headlines = crawler.get_headline(search_term, page=(1, 10) if fetch_all_pages else 1)
     return [headline.dict() for headline in headlines]
+
 
 
 def toggle_upvote(n_id, u_id, db):
