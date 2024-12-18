@@ -37,8 +37,8 @@ def read_user_news(
     """
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
-    for article in news:
-        try:
+    try:
+        for article in news:
             upvotes, upvoted = get_article_upvote_details(article.id, u.id, db)
             result.append(
                 {
@@ -48,9 +48,9 @@ def read_user_news(
                 }
             )
             return result
-        except Exception as e:
-            logger.error(f"Failed to fetch news from the database: {str(e)}")
-            raise HTTPException(status_code=500, detail="Failed to get upvote count")
+    except Exception as e:
+        logger.error(f"Failed to fetch news from the database: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get upvote count")
 
 @router.post("/search_news")
 async def search_news(request: PromptRequest):
