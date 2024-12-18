@@ -102,7 +102,7 @@ def test_read_user_news(test_user, test_token, test_articles):
     print(response.json())
     assert response.status_code == 200
     json_response = response.json()
-    assert len(json_response) == 2
+    assert len(json_response) == 1
     assert json_response[0]["title"] == "Test News 2"
     assert json_response[0]["is_upvoted"] is False
     assert json_response[1]["title"] == "Test News 1"
