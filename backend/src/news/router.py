@@ -35,9 +35,9 @@ def read_user_news(
     :param u: Authenticated user
     :return: List of news articles with their upvote status
     """
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
     try:
+        news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
+        result = []
         for article in news:
             upvotes, upvoted = get_article_upvote_details(article.id, u.id, db)
             result.append(
