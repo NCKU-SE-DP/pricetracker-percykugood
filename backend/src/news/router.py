@@ -47,10 +47,31 @@ def read_user_news(
                     "is_upvoted": upvoted,
                 }
             )
-            return result
+        return result
     except Exception as e:
         logger.error(f"Failed to fetch news from the database: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to get upvote count")
+
+@router.get("/news")
+def read_news(db=Depends(session_opener)):
+    """
+    Read news
+
+    :param db: Database session
+    :return: List of news articles with their upvote status
+    """
+    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
+    result = []
+    try:
+        for n in news:
+            upvotes, upvoted = get_article_upvote_details(n.id, None, db)
+            result.append(
+                {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
+            )
+        return result
+    except Exception as e:
+        logger.error(f"Failed to fetch news from the database: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch news from the database")
 
 @router.post("/search_news")
 async def search_news(request: PromptRequest):
@@ -123,26 +144,6 @@ def upvote_article(
         logger.error(f"Failed to toggle article: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to toggle article")
 
-@router.get("/news")
-def read_news(db=Depends(session_opener)):
-    """
-    Read news
-
-    :param db: Database session
-    :return: List of news articles with their upvote status
-    """
-    news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
-    result = []
-    try:
-        for n in news:
-            upvotes, upvoted = get_article_upvote_details(n.id, None, db)
-            result.append(
-                {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
-            )
-        return result
-    except Exception as e:
-        logger.error(f"Failed to fetch news from the database: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch news from the database")
 
 @router.post("/news_summary_custom_model")
 async def news_summary_with_custom_model(
