@@ -59,7 +59,7 @@ class UDNCrawler(NewsCrawlerBase):
         """
         return self.get_headline(search_term, page=(1, 10))
 
-    def get_headline(
+    def get_headlines(
         self, search_term: str, page: int | tuple[int, int]
     ) -> list[Headline]:
 
@@ -112,7 +112,7 @@ class UDNCrawler(NewsCrawlerBase):
 
         return headlines
 
-    def parse(self, url: str) -> News:
+    def _parse(self, url: str) -> News:
         
         response = self._perform_request(url=url)
         soup = BeautifulSoup(response.text, "html.parser")
