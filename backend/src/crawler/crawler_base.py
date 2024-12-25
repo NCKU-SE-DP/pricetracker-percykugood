@@ -74,7 +74,7 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
         return NotImplemented
 
     @abc.abstractmethod
-    def parse(self, url: AnyHttpUrl | str) -> News:
+    def _parse(self, url: AnyHttpUrl | str) -> News:
         """
         Given a news URL from the news website, fetch and parse the detailed news content.
 
