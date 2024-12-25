@@ -63,10 +63,10 @@ def read_news(db=Depends(session_opener)):
     news = db.query(NewsArticle).order_by(NewsArticle.time.desc()).all()
     result = []
     try:
-        for n in news:
-            upvotes, upvoted = get_article_upvote_details(n.id, None, db)
+        for article in news:
+            upvotes, upvoted = get_article_upvote_details(article.id, None, db)
             result.append(
-                {**n.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
+                {**article.__dict__, "upvotes": upvotes, "is_upvoted": upvoted}
             )
         return result
     except Exception as e:
