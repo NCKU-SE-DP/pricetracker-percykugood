@@ -10,6 +10,7 @@ on:
       - 'refactor/llm_client'
       - 'refactor/error_handling'
       - 'refactor/improve_code'
+
   pull_request:
     branches:
       - 'main'

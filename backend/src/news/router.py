@@ -168,6 +168,7 @@ async def news_summary_with_custom_model(
         logger.error(f"Error processing article: {str(e)}")
         raise HTTPException(status_code=500, detail="Error processing article")
 
+
 @router.get("/sentry-debug")
 async def trigger_error():
     division_by_zero = 1 / 0

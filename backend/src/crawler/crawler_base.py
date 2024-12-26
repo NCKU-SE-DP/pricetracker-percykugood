@@ -53,6 +53,7 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def get_headlines(
+
             self, search_term: str, page: int | tuple[int, int]
     ) -> list[Headline]:
         """
@@ -75,6 +76,7 @@ class NewsCrawlerBase(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def _parse(self, url: AnyHttpUrl | str) -> News:
+
         """
         Given a news URL from the news website, fetch and parse the detailed news content.
 
