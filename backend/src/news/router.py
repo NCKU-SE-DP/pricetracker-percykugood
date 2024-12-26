@@ -13,6 +13,7 @@ from .service import extract_search_keywords, generate_summary
 from ..logger.logger import logger
 
 
+
 _id_counter = itertools.count(start=1000000)
 
 router = APIRouter(
@@ -171,3 +172,4 @@ async def news_summary_with_custom_model(
 @router.get("/sentry-debug")
 async def trigger_error():
     division_by_zero = 1 / 0
+
